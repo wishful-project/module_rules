@@ -133,10 +133,10 @@ class UpiEventGenerator(object):
         msgContainer = ["agent", cmdDesc, kwargs]
 
         while not self._stop:
-          self.log.debug("Next sample".format())
           # perform UPI call
           response = self.agent.moduleManager.send_cmd_to_module_blocking(msgContainer)
           next_sample = response[2]
+          self.log.debug("Next sample{}".format(next_sample))
           yield next_sample
           if self._stop:
             break
@@ -279,7 +279,7 @@ class UpiRule(threading.Thread):
 
         #if TRANSIENT stop generator
         self.myGen.stop()
-
+        self.log.debug("Rule exits".format())
 
 
 class PktRule(threading.Thread):
@@ -388,7 +388,7 @@ class PktRule(threading.Thread):
 
         #if TRANSIENT stop generator
         self.myGen.stop()
-
+        self.log.debug("Rule exits".format())
 
 
 @wishful_module.build_module
