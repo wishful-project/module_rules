@@ -132,15 +132,27 @@ class UpiEventGenerator(object):
         kwargs = self.eventDesc.kwargs
         msgContainer = ["agent", cmdDesc, kwargs]
 
-        while not self._stop:
-          # perform UPI call
-          response = self.agent.moduleManager.send_cmd_to_module_blocking(msgContainer)
-          next_sample = response[2]
-          self.log.debug("Next sample{}".format(next_sample))
-          yield next_sample
-          if self._stop:
-            break
-          time.sleep(self.eventDesc.interval)
+        #check if UPI is implemented as generator
+        myGenerator = self.agent.moduleManager.get_generator(msgContainer)
+        if myGenerator:
+            gen = myGenerator()
+            while not self._stop:
+                next_sample = gen.next()
+                self.log.debug("Next sample{}".format(next_sample))
+                yield next_sample
+                if self._stop:
+                    break
+
+        else:
+            while not self._stop:
+              # perform UPI call
+              response = self.agent.moduleManager.send_cmd_to_module_blocking(msgContainer)
+              next_sample = response[2]
+              self.log.debug("Next sample{}".format(next_sample))
+              yield next_sample
+              if self._stop:
+                break
+              time.sleep(self.eventDesc.interval)
 
 
 class PacketGenerator(object):
