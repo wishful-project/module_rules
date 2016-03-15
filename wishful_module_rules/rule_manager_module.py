@@ -204,6 +204,8 @@ class PacketGenerator(object):
                     value = self.selector_func(pkt)
                     self.log.debug("Next sample for selector: {} - {}".format(self.field_selector, value))
                     yield value
+                else:
+                    yield pkt
             except Queue.Empty: 
               pass
 
