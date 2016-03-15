@@ -6,7 +6,8 @@ import threading
 import Queue
 from collections import deque
 from stream import ThreadedFeeder, repeatcall, seq, takewhile, dropwhile, maximum, take, filter, map, item
-from scapy.all import sniff
+from scapy.all import *
+import scapy_ex
 
 import wishful_upis as upis
 import wishful_framework as wishful_module
