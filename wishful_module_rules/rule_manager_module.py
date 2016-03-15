@@ -205,6 +205,7 @@ class PacketGenerator(object):
                     self.log.debug("Next sample for selector: {} - {}".format(self.field_selector, value))
                     yield value
                 else:
+                    self.log.debug("Next pkt".format())
                     yield pkt
             except Queue.Empty: 
               pass
@@ -225,6 +226,7 @@ class UpiRule(threading.Thread):
         self.notify_ctrl = False
         self.permanence = Permanance.PERSISTENT
         self.sink = None
+        self.calledAsGenerator = False
 
         if "filters" in ruleDesc and ruleDesc["filters"]:
             self.filterContainter = FilterContainter()
@@ -248,6 +250,8 @@ class UpiRule(threading.Thread):
         if "permanence" in ruleDesc:
             self.permanence = ruleDesc["permanence"]
 
+        if "generator" in ruleDesc:
+            self.calledAsGenerator = ruleDesc["generator"]
 
     def stop(self):
         if self.sink:
@@ -258,8 +262,12 @@ class UpiRule(threading.Thread):
     def _notify_ctrl(self, sample):
         dest = "controller"
         cmdDesc = CmdDesc()
-        cmdDesc.type = "wishful_rule"
-        cmdDesc.func_name = "wishful_rule"
+        if self.calledAsGenerator:
+            cmdDesc.type = "wishful_generator"
+            cmdDesc.func_name = "wishful_generator"
+        else:
+            cmdDesc.type = "wishful_rule"
+            cmdDesc.func_name = "wishful_rule"
         cmdDesc.call_id = str(0)
         cmdDesc.serialization_type = CmdDesc.PICKLE
         msg = sample
@@ -327,6 +335,7 @@ class PktRule(threading.Thread):
             selector = ruleDesc["selector"]
             self.selector = selector.field
 
+
         self.myGen = PacketGenerator(iface=self.iface, pfilter=self.pktMatch, field_selector=self.selector)
         self.filterContainter = None
         self.match = None
@@ -334,6 +343,7 @@ class PktRule(threading.Thread):
         self.notify_ctrl = False
         self.permanence = Permanance.PERSISTENT
         self.sink = None
+        self.calledAsGenerator = False
 
         if "filters" in ruleDesc and ruleDesc["filters"]:
             self.filterContainter = FilterContainter()
@@ -357,6 +367,8 @@ class PktRule(threading.Thread):
         if "permanence" in ruleDesc:
             self.permanence = ruleDesc["permanence"]
 
+        if "generator" in ruleDesc:
+            self.calledAsGenerator = ruleDesc["generator"]
 
     def stop(self):
         if self.sink:
@@ -367,8 +379,13 @@ class PktRule(threading.Thread):
     def _notify_ctrl(self, sample):
         dest = "controller"
         cmdDesc = CmdDesc()
-        cmdDesc.type = "wishful_rule"
-        cmdDesc.func_name = "wishful_rule"
+        if self.calledAsGenerator:
+            cmdDesc.type = "wishful_generator"
+            cmdDesc.func_name = "wishful_generator"
+        else:
+            cmdDesc.type = "wishful_rule"
+            cmdDesc.func_name = "wishful_rule"
+
         cmdDesc.call_id = str(0)
         cmdDesc.serialization_type = CmdDesc.PICKLE
         msg = sample
