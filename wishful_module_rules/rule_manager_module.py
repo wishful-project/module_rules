@@ -133,6 +133,7 @@ class UpiEventGenerator(object):
         msgContainer = ["agent", cmdDesc, kwargs]
 
         #check if UPI is implemented as generator
+        
         myGenerator = self.agent.moduleManager.get_generator(msgContainer)
         if myGenerator:
             gen = myGenerator()
