@@ -133,9 +133,12 @@ class UpiEventGenerator(object):
         msgContainer = ["agent", cmdDesc, kwargs]
 
         #check if UPI is implemented as generator
-        
+        myModule = self.agent.moduleManager.get_module(msgContainer)
         myGenerator = self.agent.moduleManager.get_generator(msgContainer)
-        if myGenerator:
+        if myModule and myGenerator:
+            #if there is function that has to be called before generator function, call it
+            myModule.before_call(msgContainer)
+
             gen = myGenerator()
             while not self._stop:
                 next_sample = gen.next()
@@ -143,6 +146,9 @@ class UpiEventGenerator(object):
                 yield next_sample
                 if self._stop:
                     break
+
+            #if there is function that has to be called after generator function, call it
+            myModule.after_call(msgContainer)
 
         else:
             while not self._stop:
