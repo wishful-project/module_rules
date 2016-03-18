@@ -57,7 +57,7 @@ class PacketSinkAggregator(Sink):
                 self.source._stop()
 
 
-class PacketSource():
+class PacketSniffer():
     def __init__(self, iface=None, pfilter=None, name="MyPacketSource"):
         self.iface = iface
         self.filter = pfilter
@@ -90,7 +90,7 @@ class PacketSource():
 
 
 if __name__ == "__main__":
-    source = PacketSource(iface='wlan0', pfilter="icmp")
+    source = PacketSniffer(iface='wlan0', pfilter="icmp")
     ttlCb = lambda x: print("TTL:",x)
     dstCb = lambda x: print("DST:",x)
     pktCb = lambda x: x.show()
