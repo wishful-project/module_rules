@@ -1,1 +1,1 @@
-from rule_manager_module import *
+from .rule_manager_module import *

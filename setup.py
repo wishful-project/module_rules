@@ -15,5 +15,5 @@ setup(
     description='WiSHFUL Rules Module',
     long_description='Implementation of a wireless agent using the unified programming interfaces (UPIs) of the Wishful project.',
     keywords='wireless control',
-    install_requires=['scapy']
+    install_requires=['scapy-python3']
 )

@@ -3,11 +3,11 @@ import time
 import operator
 import datetime
 import threading
-import Queue
+import _thread
+import queue
 from collections import deque
-from stream import ThreadedFeeder, repeatcall, seq, takewhile, dropwhile, maximum, take, filter, map, item
+import stream
 from scapy.all import *
-import scapy_ex
 
 import wishful_upis as upis
 import wishful_framework as wishful_module
@@ -138,17 +138,19 @@ class UpiEventGenerator(object):
         myGenerator = self.agent.moduleManager.get_generator(msgContainer)
         if myModule and myGenerator:
             #if there is function that has to be called before generator function, call it
+            self.log.info("Prepare UPI generator".format())
             myModule.before_call(msgContainer)
 
             gen = myGenerator()
             while not self._stop:
-                next_sample = gen.next()
+                next_sample = next(gen)
                 self.log.debug("Next sample{}".format(next_sample))
                 yield next_sample
                 if self._stop:
                     break
 
             #if there is function that has to be called after generator function, call it
+            self.log.info("Kill UPI generator".format())
             myModule.after_call(msgContainer)
 
         else:
@@ -168,7 +170,7 @@ class PacketGenerator(object):
         self.log = logging.getLogger('PacketGenerator')
         self.log.info("start packet generator on iface: {}, packet filter: {}, field selector: {}".format(iface,pfilter,field_selector))
         self._stop = False
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
 
         self.iface = iface
         self.pfilter = pfilter
@@ -182,9 +184,9 @@ class PacketGenerator(object):
             self.selector_func = lambda x:x.sprintf(selector_str)
 
         if pfilter:
-            self.worker = threading.Thread(target=sniff, kwargs={"iface":iface, "prn":self.ip_monitor_callback, "filter":pfilter})
+            self.worker = threading.Thread(target=sniff, kwargs={"iface":iface, "prn":self.ip_monitor_callback, "filter":pfilter, 'store':0}, name="scapy")
         else:
-            self.worker = threading.Thread(target=sniff, kwargs={"iface":iface, "prn":self.ip_monitor_callback})
+            self.worker = threading.Thread(target=sniff, kwargs={"iface":iface, "prn":self.ip_monitor_callback, 'store':0}, name="scapy")
         self.worker.setDaemon(True)
         self.worker.start()
         
@@ -207,13 +209,13 @@ class PacketGenerator(object):
                 else:
                     self.log.debug("Next pkt".format())
                     yield pkt
-            except Queue.Empty: 
+            except queue.Empty: 
               pass
 
 
 class UpiRule(threading.Thread):
     def __init__(self, agent, ruleId, ruleDesc):
-        super(UpiRule, self).__init__()
+        super(UpiRule, self).__init__(name="upi")
         self.log = logging.getLogger('UpiRule')
         self.agent = agent
         self.id = ruleId
@@ -255,7 +257,8 @@ class UpiRule(threading.Thread):
 
     def stop(self):
         if self.sink:
-            [0,1,2,3,4] >> map(lambda x: x) >> self.sink
+            self.sink.stop()
+            [0,1,2,3,4] >> stream.smap(lambda x: x) >> self.sink
         self.myGen.stop()
 
 
@@ -280,27 +283,27 @@ class UpiRule(threading.Thread):
     def run( self ):
         self.log.info("Start rule".format())
         if self.permanence == Permanance.TRANSIENT:
-          self.sink = item[:1]
+          self.sink = stream.item[:1]
         else:
-          self.sink = min
+          self.sink = stream.Sink()
 
-        nop = map(lambda x: x)
+        nop = stream.smap(lambda x: x)
         elements = [nop, nop, nop, nop, nop]
 
         if self.filterContainter:
-            elements[0] = map(lambda x: self.filterContainter(x)) 
+            elements[0] = stream.smap(lambda x: self.filterContainter(x))
 
         #remove None value from pipline
-        elements[1] = filter(lambda x: True if x is not None else False) 
+        elements[1] = stream.sfilter(lambda x: True if x is not None else False)
 
         if self.match:
-            elements[2] = filter(lambda x: self.match(x)) 
+            elements[2] = stream.sfilter(lambda x: self.match(x))
 
         if self.action:
-            elements[3] = map(lambda x: self.action(x)) 
+            elements[3] = stream.smap(lambda x: self.action(x))
 
         if self.notify_ctrl:
-            elements[4] = map(self._notify_ctrl)
+            elements[4] = stream.smap(self._notify_ctrl)
 
         try:
             self.myGen() >> elements[0] >> elements[1] >> elements[2] >> elements[3] >> elements[4] >> self.sink
@@ -309,12 +312,16 @@ class UpiRule(threading.Thread):
 
         #if TRANSIENT stop generator
         self.myGen.stop()
-        self.log.debug("Rule exits".format())
+        self.sink.stop()
+        self.log.info("Rule exits".format())
+        self.log.info("Active Threads:{}".format(threading.active_count()))
+        _thread.exit()
+        self.log.info("asdasfa exits".format())
 
 
 class PktRule(threading.Thread):
     def __init__(self, agent, ruleId, ruleDesc):
-        super(PktRule, self).__init__()
+        super(PktRule, self).__init__(name="pkt")
         self.log = logging.getLogger('PktRule')
         self.agent = agent
         self.id = ruleId
@@ -372,7 +379,8 @@ class PktRule(threading.Thread):
 
     def stop(self):
         if self.sink:
-            [0,1,2,3,4] >> map(lambda x: x) >> self.sink
+            self.sink.stop()
+            [0,1,2,3,4] >> stream.smap(lambda x: x) >> self.sink
         self.myGen.stop()
 
 
@@ -398,27 +406,27 @@ class PktRule(threading.Thread):
     def run( self ):
         self.log.info("Start rule".format())
         if self.permanence == Permanance.TRANSIENT:
-          self.sink = item[:1]
+          self.sink = stream.item[:1]
         else:
-          self.sink = min
+          self.sink = stream.Sink()
 
-        nop = map(lambda x: x)
+        nop = stream.smap(lambda x: x)
         elements = [nop, nop, nop, nop, nop]
 
         if self.filterContainter:
-            elements[0] = map(lambda x: self.filterContainter(x)) 
+            elements[0] = stream.smap(lambda x: self.filterContainter(x))
 
         #remove None value from pipline
-        elements[1] = filter(lambda x: True if x is not None else False) 
+        elements[1] = stream.sfilter(lambda x: True if x is not None else False)
 
         if self.match:
-            elements[2] = filter(lambda x: self.match(x)) 
+            elements[2] = stream.sfilter(lambda x: self.match(x))
 
         if self.action:
-            elements[3] = map(lambda x: self.action(x)) 
+            elements[3] = stream.smap(lambda x: self.action(x))
 
         if self.notify_ctrl:
-            elements[4] = map(self._notify_ctrl)
+            elements[4] = stream.smap(self._notify_ctrl)
 
         try:
             self.myGen() >> elements[0] >> elements[1] >> elements[2] >> elements[3] >> elements[4] >> self.sink
@@ -427,8 +435,11 @@ class PktRule(threading.Thread):
 
         #if TRANSIENT stop generator
         self.myGen.stop()
-        self.log.debug("Rule exits".format())
-
+        self.sink.stop()
+        self.log.info("Rule exits".format())
+        self.log.info("Active Threads:{}".format(threading.active_count()))
+        _thread.exit()
+        self.log.info("asdasfa exits".format())
 
 @wishful_module.build_module
 class RuleManagerModule(wishful_module.AgentModule):
@@ -453,14 +464,17 @@ class RuleManagerModule(wishful_module.AgentModule):
         event = ruleDesc["event"]
         if event.type == "TimeEvent":
             newRule = UpiRule(self.agent, ruleId, ruleDesc)
-            newRule.deamon = True
+            newRule.setDaemon(True)
             newRule.start()
         elif event.type == "PktEvent":
             newRule = PktRule(self.agent, ruleId, ruleDesc)
-            newRule.deamon = True
+            newRule.setDaemon(True)
             newRule.start()
         else:
             self.log.debug("Event Type not supported: {}".format(event.type))
+
+        #for t in threading.enumerate():
+        #    print(t, t.is_alive(), t.name)
 
         self.rules[ruleId] = newRule
         return ruleId
@@ -482,6 +496,6 @@ class RuleManagerModule(wishful_module.AgentModule):
     @wishful_module.on_disconnected()
     def remove_all_rules(self):
         self.log.info("Remove all rules".format())
-        for ruleId, rule in self.rules.iteritems():
+        for ruleId, rule in self.rules.items():
            rule.stop()
         self.rules = {}

@@ -19,7 +19,7 @@ from scapy.layers.dot11 import Dot11Elt
 from scapy.layers.dot11 import Dot11ProbeReq
 from scapy.packet import Packet
 
-from printer import Printer
+from .printer import Printer
 
 
 class SignedByteField(Field):
@@ -268,7 +268,7 @@ def scapy_layers_dot11_Dot11_rates(self, id=1):
 	if elt:
 		try:
 			return Dot11EltRates(str(elt)).rates
-		except Exception, e:
+		except Exception as e:
 			Printer.error('Bad Dot11EltRates got[{0:s}]'.format(elt.info))
 			Printer.exception(e)
 	return []
@@ -309,7 +309,7 @@ def scapy_layers_dot11_Dot11_channel(self):
 	if elt:
 		try:
 			return int(ord(elt.info))
-		except Exception, e:
+		except Exception as e:
 			Printer.error('Bad Dot11Elt channel got[{0:s}]'.format(elt.info))
 			Printer.exception(e)
 	return None
@@ -323,7 +323,7 @@ def scapy_layers_dot11_Dot11_rsn(self):
 	if elt:
 		try:
 			return Dot11EltRSN(str(elt))
-		except Exception, e:
+		except Exception as e:
 			Printer.error('Bad Dot11EltRSN got[{0:s}]'.format(elt.info))
 			Printer.exception(e)
 	return None
