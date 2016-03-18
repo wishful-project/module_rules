@@ -439,7 +439,6 @@ class PktRule(threading.Thread):
         self.log.info("Rule exits".format())
         self.log.info("Active Threads:{}".format(threading.active_count()))
         _thread.exit()
-        self.log.info("asdasfa exits".format())
 
 @wishful_module.build_module
 class RuleManagerModule(wishful_module.AgentModule):
@@ -472,9 +471,6 @@ class RuleManagerModule(wishful_module.AgentModule):
             newRule.start()
         else:
             self.log.debug("Event Type not supported: {}".format(event.type))
-
-        #for t in threading.enumerate():
-        #    print(t, t.is_alive(), t.name)
 
         self.rules[ruleId] = newRule
         return ruleId
