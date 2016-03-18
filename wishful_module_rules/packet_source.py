@@ -4,7 +4,7 @@ from scapy.all import *
 
 
 class MySink(object):
-    def __init__(self, name=None, field_selector=None, callback=None):
+    def __init__(self, callback=None, name=None, field_selector=None):
         self.name = name
         self.field_selector = field_selector
         self.callback = callback
@@ -21,16 +21,11 @@ class MySink(object):
         return selector_func
 
     def recv(self, msg):
-        print (self.name)
-
         if self.selector_func:
             msg = self.selector_func(msg)
-            print ("\t", self.field_selector, " : ", msg)
-        else:
-            try:
-                msg.show()
-            except:
-                pass
+
+        if self.callback:
+            self.callback(msg)
 
 
 class PacketSinkAggregator(Sink):
@@ -52,13 +47,13 @@ class PacketSinkAggregator(Sink):
 
     def add_sink(self, sink, field_selector=None):
         self._mySinks.append(sink)
-        if self.get_active_sink_number():
+        if self.get_active_sink_number() and not self.source.isrunning():
             self.source._start()
 
     def remove_sink(self, sink):
         if sink in self._mySinks:
             self._mySinks.remove(sink)
-            if self.get_active_sink_number() == 0:
+            if self.get_active_sink_number() == 0 and self.source.isrunning():
                 self.source._stop()
 
 
@@ -84,6 +79,9 @@ class PacketSource():
         self._running = False
         self.engine.stop()
 
+    def isrunning(self):
+        return self._running
+
     def add_sink(self, sink):
         self.sink.add_sink(sink)
 
@@ -92,38 +90,47 @@ class PacketSource():
 
 
 if __name__ == "__main__":
-    source = PacketSource(iface='eth0')
-    myTtlSink = MySink(name="ttlSink", field_selector="IP.ttl")
-    myDstSink = MySink(name="dstSink", field_selector="IP.dst")
-    myPktSink = MySink(name="PktSink")
+    source = PacketSource(iface='wlan0', pfilter="icmp")
+    ttlCb = lambda x: print("TTL:",x)
+    dstCb = lambda x: print("DST:",x)
+    pktCb = lambda x: x.show()
 
-    #SILENT
+    myTtlSink = MySink(name="ttlSink", field_selector="IP.ttl", callback=ttlCb)
+    myDstSink = MySink(name="dstSink", field_selector="IP.dst", callback=dstCb)
+    myPktSink = MySink(name="PktSink", callback=pktCb)
+
+    print("SILENCE")
     time.sleep(5)
-    
-    #TTL SINK
+
+    print("Start TTL ")
     source.add_sink(myTtlSink)
     time.sleep(10)
     source.remove_sink(myTtlSink)
 
-    #SILENT
+    print("SILENCE")
     time.sleep(5)
-    #PKT SINK
+
+    print("Start PKT")
     source.add_sink(myPktSink)
     time.sleep(10)
     source.remove_sink(myPktSink)
 
-    #SILENT
+    print("SILENCE")
     time.sleep(5)
-    #BOTH SINKS
+
+    print("Start TTL and DST")
     source.add_sink(myTtlSink)
     source.add_sink(myDstSink)
     time.sleep(10)
-    #REMOVE PKT SINK
-    source.remove_sink(myDstSink)
 
+    print("Remove DST")
+    source.remove_sink(myDstSink)
     time.sleep(10)
-    #SILENT
+
+    print("Remove DST")
     source.remove_sink(myTtlSink)
+
+    print("SILENCE")
     time.sleep(10)
 
     print("DONE")

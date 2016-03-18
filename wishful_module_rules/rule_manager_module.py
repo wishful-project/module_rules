@@ -7,6 +7,7 @@ import _thread
 import queue
 from collections import deque
 import stream
+from .packet_source import PacketSource, MySink
 from scapy.all import *
 
 import wishful_upis as upis
@@ -448,6 +449,9 @@ class RuleManagerModule(wishful_module.AgentModule):
 
         self.ruleIdGen = 0
         self.rules = {}
+
+        #sniffer contains iface and filter
+        self.packetSniffers = []
 
 
     def generate_new_rule_id(self):
