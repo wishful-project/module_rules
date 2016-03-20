@@ -1,10 +1,14 @@
 import time
-import threading
-from scapy.all import *
+from scapy.all import Sink, SniffSource, PipeEngine
+
+__author__ = "Piotr Gawlowicz"
+__copyright__ = "Copyright (c) 2015, Technische Universität Berlin"
+__version__ = "0.1.0"
+__email__ = "{gawlowicz}@tkn.tu-berlin.de"
 
 
-class MySink(object):
-    def __init__(self, callback=None, name=None, field_selector=None):
+class MyPktSink(object):
+    def __init__(self, name=None, field_selector=None, callback=None):
         self.name = name
         self.field_selector = field_selector
         self.callback = callback
@@ -47,14 +51,10 @@ class PacketSinkAggregator(Sink):
 
     def add_sink(self, sink, field_selector=None):
         self._mySinks.append(sink)
-        if self.get_active_sink_number() and not self.source.isrunning():
-            self.source._start()
 
     def remove_sink(self, sink):
         if sink in self._mySinks:
             self._mySinks.remove(sink)
-            if self.get_active_sink_number() == 0 and self.source.isrunning():
-                self.source._stop()
 
 
 class PacketSniffer():
@@ -84,9 +84,14 @@ class PacketSniffer():
 
     def add_sink(self, sink):
         self.sink.add_sink(sink)
+        if self.sink.get_active_sink_number() and not self.isrunning():
+            self._start()
 
     def remove_sink(self, sink):
         self.sink.remove_sink(sink)
+        if self.sink.get_active_sink_number() == 0 and self.isrunning():
+            self._stop()
+
 
 
 if __name__ == "__main__":
@@ -95,9 +100,9 @@ if __name__ == "__main__":
     dstCb = lambda x: print("DST:",x)
     pktCb = lambda x: x.show()
 
-    myTtlSink = MySink(name="ttlSink", field_selector="IP.ttl", callback=ttlCb)
-    myDstSink = MySink(name="dstSink", field_selector="IP.dst", callback=dstCb)
-    myPktSink = MySink(name="PktSink", callback=pktCb)
+    myTtlSink = MyPktSink(name="ttlSink", field_selector="IP.ttl", callback=ttlCb)
+    myDstSink = MyPktSink(name="dstSink", field_selector="IP.dst", callback=dstCb)
+    myPktSink = MyPktSink(name="PktSink", callback=pktCb)
 
     print("SILENCE")
     time.sleep(5)
