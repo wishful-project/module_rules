@@ -24,7 +24,7 @@ class RuleManagerModule(wishful_module.AgentModule):
         #sniffer contains iface and filter
         self.activePacketSniffers = []
 
-        #list of active UPI generators per (UPI,iface)
+        #list of active UPI generators per (iface, module, upi)
         self.activeUpiGenerators = []
 
 

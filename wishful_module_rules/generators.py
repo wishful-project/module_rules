@@ -106,7 +106,7 @@ class PacketGenerator(object):
                     yield pkt
 
                 if self._stop:
-                    self.log.info("UPI Generator break".format())
+                    self.log.info("PKT Generator break".format())
                     break
             except queue.Empty: 
               pass
