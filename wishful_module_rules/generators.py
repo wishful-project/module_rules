@@ -44,6 +44,7 @@ class UpiEventGenerator(object):
                 self.log.debug("Next sample{}".format(next_sample))
                 yield next_sample
                 if self._stop:
+                    self.log.info("UPI Generator break".format())
                     break
 
             #if there is function that has to be called after generator function, call it
@@ -58,6 +59,7 @@ class UpiEventGenerator(object):
               self.log.debug("Next sample{}".format(next_sample))
               yield next_sample
               if self._stop:
+                self.log.info("UPI Generator break".format())
                 break
               time.sleep(self.eventDesc.interval)
 
@@ -102,5 +104,9 @@ class PacketGenerator(object):
                 else:
                     self.log.debug("Next pkt".format())
                     yield pkt
+
+                if self._stop:
+                    self.log.info("UPI Generator break".format())
+                    break
             except queue.Empty: 
               pass

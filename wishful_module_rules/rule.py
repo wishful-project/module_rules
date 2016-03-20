@@ -110,13 +110,19 @@ class Rule(threading.Thread):
         if self.notify_ctrl:
             elements[4] = stream.smap(self._notify_ctrl)
 
+        eventGenerator = self.myGen()
         try:
-            self.myGen() >> elements[0] >> elements[1] >> elements[2] >> elements[3] >> elements[4] >> self.sink
+            eventGenerator >> elements[0] >> elements[1] >> elements[2] >> elements[3] >> elements[4] >> self.sink
         except Exception as e:
             self.log.debug("Rule exits, reason: {}".format(e))
 
         #if TRANSIENT stop generator
         self.myGen.stop()
+        #call next one more time to finalize generator
+        try:
+            next(eventGenerator)
+        except:
+            pass
         self.sink.stop()
         self.log.info("Rule exits".format())
         self.log.info("Active Threads:{}".format(threading.active_count()))
