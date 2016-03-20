@@ -33,6 +33,8 @@ class Rule(threading.Thread):
         self.sink = None
         self.calledAsGenerator = False
 
+        self.LocalControllerId = None
+
         if "filters" in ruleDesc and ruleDesc["filters"]:
             self.filterContainter = FilterContainter()
             for f in ruleDesc["filters"]:
@@ -58,9 +60,17 @@ class Rule(threading.Thread):
         if "generator" in ruleDesc:
             self.calledAsGenerator = ruleDesc["generator"]
 
+        #check if local control program
+        if "LocalControllerId" in ruleDesc:
+            self.LocalControllerId = ruleDesc["LocalControllerId"]
+
 
     def _notify_ctrl(self, sample):
-        dest = "controller"
+        if self.LocalControllerId:
+            dest = self.LocalControllerId
+        else:
+            dest = "controller"
+
         cmdDesc = CmdDesc()
         if self.calledAsGenerator:
             cmdDesc.type = "wishful_generator"
@@ -75,7 +85,7 @@ class Rule(threading.Thread):
 
         encapsulatedMsg = {"node_uuid":self.agent.uuid, "rule_id":self.id, "msg":msg}
         msgContainer = [dest, cmdDesc, encapsulatedMsg]
-        self.agent.send_upstream(msgContainer)
+        self.agent.send_upstream(msgContainer, self.LocalControllerId)
 
 
     def stop(self):
